@@ -6,14 +6,18 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import freemarker.template.Configuration;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
+import org.json.JSONException;
+import org.json.JSONObject;
 import spark.*;
 import spark.template.freemarker.FreeMarkerEngine;
 
@@ -122,6 +126,7 @@ public final class Main {
     Spark.get("/autocorrect", new AutocorrectHandler(), freeMarker);
     //TODO: create a call to Spark.post to make a post request to a url which
       // will handle getting autocorrect results for the input
+    Spark.post("/autocorrect", new ResultsHandler());
   }
 
   /**
@@ -159,16 +164,23 @@ public final class Main {
      */
     private static class ResultsHandler implements Route {
         @Override
-        public String handle(Request req, Response res) {
+        public String handle(Request req, Response res) throws JSONException {
             //TODO: Get JSONObject from req and use it to get the value of the input you want to
             // generate suggestions for
-
+          JsonObject reqObject = GSON.fromJson(req.body(), JsonObject.class);
+          String input = reqObject.get("text").toString();
             //TODO: use the global autocorrect instance to get the suggestions
-
+          Set<String> suggestions = ac.suggest(input);
             //TODO: create an immutable map using the suggestions
-
+          Map<Integer, String> map = new HashMap<>();
+          int count = 0;
+          for (String item : suggestions) {
+            map.put(count, item);
+            count++;
+          }
+          ImmutableMap<Integer, String> imMap = ImmutableMap.<Integer, String>builder().putAll(map).build();
             //TODO: return a Json of the suggestions (HINT: use the GSON.Json())
-            return null;
+            return  GSON.toJson(imMap);
         }
     }
 }
